@@ -102,7 +102,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
                 CREATE TABLE import.{} (
                     LIKE import.zones including all
                 );
-            """.format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE)
+            """.format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE))
             )
 
     mp_context = get_context()
@@ -145,7 +145,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
                     );
                     DROP TABLE import.zones_%(table)s;
                 """
-                .format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE)
+                .format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE))
                 )
 
     if cosmogony_path.endswith('.json'):
