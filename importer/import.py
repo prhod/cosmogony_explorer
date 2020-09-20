@@ -69,7 +69,10 @@ def import_zone(z_line):
         z.pop("geometry"),
         number_mode=NM_DECIMAL|NM_NATIVE
     )
-    pg_cur.execute(SINGLE_INSERT, z)
+    try:
+        pg_cur.execute(SINGLE_INSERT, z)
+    except IntegrityError:
+        pass
 
 def import_zone_with_update(z_line):
     global pg_cur
