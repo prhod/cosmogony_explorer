@@ -15,8 +15,8 @@ from multiprocessing import cpu_count, Process, get_context
 from multiprocessing.pool import Pool
 
 _IS_PARTIAL_IMPORT = False
-_IMPORT_TABLE = 'zone'
-_PARTIAL_IMPORT_TABLE = 'zone_partial'
+_IMPORT_TABLE = 'zones'
+_PARTIAL_IMPORT_TABLE = 'zones_partial'
 
 def retry_if_db_error(exception):
     return isinstance(exception, psycopg2.OperationalError)
