@@ -151,11 +151,11 @@ def _import_cosmogony_to_pg(cosmogony_path):
     if cosmogony_path.endswith('.json'):
         with open(cosmogony_path, "rb") as f:
             zones = ijson.items(f, "zones.item")
-            import_zones(zones, partial_import)
+            import_zones(zones)
     elif cosmogony_path.endswith('.jsonl.gz'):
         with gzip.open(cosmogony_path) as f:
             zones = (line for line in f)
-            import_zones(zones, partial_import)
+            import_zones(zones)
     else:
         raise Exception("Unknown file extension in '{}'", cosmogony_path)
 
