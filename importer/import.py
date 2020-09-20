@@ -62,9 +62,9 @@ def import_zone(z_line):
         number_mode=NM_DECIMAL|NM_NATIVE
     )
     if _IS_PARTIAL_IMPORT:
-        table = _IMPORT_TABLE
-    else:
         table = _PARTIAL_IMPORT_TABLE
+    else:
+        table = _IMPORT_TABLE
     pg_cur.execute(SINGLE_INSERT.format(table), z)
 
 
@@ -164,7 +164,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
     print("Import done.")
 
 
-def import_data(cosmogony_path, partial_import=False):
+def import_data(cosmogony_path, partial_import='false'):
     """
     import the cosmogony data into pg
 
@@ -172,7 +172,7 @@ def import_data(cosmogony_path, partial_import=False):
 
     The `publish` method needs to be called to make the data available
     """
-    _IS_PARTIAL_IMPORT = partial_import
+    _IS_PARTIAL_IMPORT = (partial_import.lower() == 'true')
     return _import_cosmogony_to_pg(cosmogony_path)
 
 
