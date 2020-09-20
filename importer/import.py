@@ -72,6 +72,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
     _pg_execute("CREATE SCHEMA IF NOT EXISTS import;")
 
     if not _IS_PARTIAL_IMPORT:
+        print("not partial : dropping zone to force creation")
         _pg_execute("DROP TABLE IF EXISTS import.zones;")
     _pg_execute("DROP TABLE IF EXISTS import.{};".format(_PARTIAL_IMPORT_TABLE))
 
@@ -97,6 +98,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
         )
 
     if _IS_PARTIAL_IMPORT:
+        print("creating partial table")
         _pg_execute(
             """
                 CREATE TABLE import.{} (
