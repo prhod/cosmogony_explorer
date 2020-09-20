@@ -169,7 +169,8 @@ def import_data(cosmogony_path, partial_import=False):
 
     The `publish` method needs to be called to make the data available
     """
-    return _import_cosmogony_to_pg(cosmogony_path, partial_import)
+    _IS_PARTIAL_IMPORT = partial_import
+    return _import_cosmogony_to_pg(cosmogony_path)
 
 
 def publish():
