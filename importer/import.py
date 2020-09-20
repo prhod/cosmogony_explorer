@@ -42,7 +42,7 @@ def _pg_execute(sql, params=None):
 
 
 SINGLE_INSERT = """
-    INSERT INTO %(table_name)s
+    INSERT INTO {}
     VALUES (
         %(id)s, %(parent)s, %(name)s,
         %(admin_level)s, %(zone_type)s,
@@ -62,10 +62,10 @@ def import_zone(z_line):
         number_mode=NM_DECIMAL|NM_NATIVE
     )
     if _IS_PARTIAL_IMPORT:
-        z["table_name"] = _IMPORT_TABLE
+        table = _IMPORT_TABLE
     else:
-        z["table_name"] = _PARTIAL_IMPORT_TABLE
-    pg_cur.execute(SINGLE_INSERT, z)
+        table = _PARTIAL_IMPORT_TABLE
+    pg_cur.execute(SINGLE_INSERT.format(table), z)
 
 
 def _import_cosmogony_to_pg(cosmogony_path):
@@ -73,7 +73,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
 
     if not _IS_PARTIAL_IMPORT:
         _pg_execute("DROP TABLE IF EXISTS import.zones;")
-    _pg_execute("DROP TABLE IF EXISTS import.%s;", (_PARTIAL_IMPORT_TABLE, ))
+    _pg_execute("DROP TABLE IF EXISTS import.{};".format(_PARTIAL_IMPORT_TABLE))
 
     _pg_execute(
         """
@@ -99,10 +99,10 @@ def _import_cosmogony_to_pg(cosmogony_path):
     if _IS_PARTIAL_IMPORT:
         _pg_execute(
             """
-                CREATE TABLE import.%s (
+                CREATE TABLE import.{} (
                     LIKE import.zones including all
                 );
-            """, (_PARTIAL_IMPORT_TABLE, )
+            """.format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE)
             )
 
     mp_context = get_context()
@@ -140,11 +140,12 @@ def _import_cosmogony_to_pg(cosmogony_path):
             _pg_execute(
                 """
                     INSERT INTO import.zones (
-                        SELECT * from import.%(table)s
+                        SELECT * from import.{}
                         WHERE %(table)s.id not in zones.id
                     );
                     DROP TABLE import.zones_%(table)s;
-                """, {'table': _PARTIAL_IMPORT_TABLE}
+                """
+                .format(psycopg2.sql.Identifier(_PARTIAL_IMPORT_TABLE)
                 )
 
     if cosmogony_path.endswith('.json'):
