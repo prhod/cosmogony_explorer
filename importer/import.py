@@ -71,7 +71,7 @@ def import_zone(z_line):
     )
     try:
         pg_cur.execute(SINGLE_INSERT, z)
-    except IntegrityError:
+    except psycopg2.IntegrityError:
         pass
 
 def import_zone_with_update(z_line):
