@@ -42,7 +42,7 @@ def _pg_execute(sql, params=None):
 
 
 SINGLE_INSERT = """
-    INSERT INTO {}
+    INSERT INTO import.{}
     VALUES (
         %(id)s, %(parent)s, %(name)s,
         %(admin_level)s, %(zone_type)s,
