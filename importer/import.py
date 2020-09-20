@@ -14,6 +14,10 @@ import gzip
 from multiprocessing import cpu_count, Process, get_context
 from multiprocessing.pool import Pool
 
+_IS_PARTIAL_IMPORT = False
+_IMPORT_TABLE = 'zone'
+_PARTIAL_IMPORT_TABLE = 'zone_partial'
+
 def retry_if_db_error(exception):
     return isinstance(exception, psycopg2.OperationalError)
 
@@ -38,25 +42,13 @@ def _pg_execute(sql, params=None):
 
 
 SINGLE_INSERT = """
-    INSERT INTO import.zones
+    INSERT INTO %(table_name)s
     VALUES (
         %(id)s, %(parent)s, %(name)s,
         %(admin_level)s, %(zone_type)s,
         %(osm_id)s, %(wikidata)s,
         ST_MakeValid(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(geometry)s), 4326), 3857))
     )
-"""
-
-SINGLE_INSERT_OR_UPDATE = """
-    DELETE FROM import.zones WHERE id=%(id)s;
-
-    INSERT INTO import.zones
-    VALUES (
-        %(id)s, %(parent)s, %(name)s,
-        %(admin_level)s, %(zone_type)s,
-        %(osm_id)s, %(wikidata)s,
-        ST_MakeValid(ST_Transform(ST_SetSRID(ST_GeomFromGeoJSON(%(geometry)s), 4326), 3857))
-    );
 """
 
 def import_zone(z_line):
@@ -69,28 +61,19 @@ def import_zone(z_line):
         z.pop("geometry"),
         number_mode=NM_DECIMAL|NM_NATIVE
     )
-    try:
-        pg_cur.execute(SINGLE_INSERT, z)
-    except psycopg2.IntegrityError:
-        pass
-
-def import_zone_with_update(z_line):
-    global pg_cur
-    if isinstance(z_line, (str, bytes)):
-        z = rapidjson.loads(z_line)
+    if _IS_PARTIAL_IMPORT:
+        z["table_name"] = _IMPORT_TABLE
     else:
-        z = z_line
-    z["geometry"] = rapidjson.dumps(
-        z.pop("geometry"),
-        number_mode=NM_DECIMAL|NM_NATIVE
-    )
-    pg_cur.execute(SINGLE_INSERT_OR_UPDATE, z)
+        z["table_name"] = _PARTIAL_IMPORT_TABLE
+    pg_cur.execute(SINGLE_INSERT, z)
 
-def _import_cosmogony_to_pg(cosmogony_path, partial_import):
+
+def _import_cosmogony_to_pg(cosmogony_path):
     _pg_execute("CREATE SCHEMA IF NOT EXISTS import;")
 
-    if not partial_import:
+    if not _IS_PARTIAL_IMPORT:
         _pg_execute("DROP TABLE IF EXISTS import.zones;")
+    _pg_execute("DROP TABLE IF EXISTS import.%s;", _PARTIAL_IMPORT_TABLE)
 
     _pg_execute(
         """
@@ -113,6 +96,15 @@ def _import_cosmogony_to_pg(cosmogony_path, partial_import):
         """
         )
 
+    if _IS_PARTIAL_IMPORT:
+        _pg_execute(
+            """
+                CREATE TABLE import.%s (
+                    LIKE import.zones including all
+                );
+            """, _PARTIAL_IMPORT_TABLE
+            )
+
     mp_context = get_context()
     class SafeProcess(mp_context.Process):
         def run(self):
@@ -122,7 +114,7 @@ def _import_cosmogony_to_pg(cosmogony_path, partial_import):
                     return super().run()
     mp_context.Process = SafeProcess
 
-    def import_zones(zones_iterator, partial_import):
+    def import_zones(zones_iterator):
         print("Importing cosmogony zones to pg...")
         start = time.clock()
         def print_timer():
@@ -133,11 +125,7 @@ def _import_cosmogony_to_pg(cosmogony_path, partial_import):
 
         nb_workers = min(8, cpu_count())
         with Pool(nb_workers, context=mp_context) as pool:
-            if partial_import:
-                res = pool.imap_unordered(import_zone, zones_iterator, chunksize=10)
-                # res = pool.imap_unordered(import_zone_with_update, zones_iterator, chunksize=10)
-            else:
-                res = pool.imap_unordered(import_zone, zones_iterator, chunksize=10)
+            res = pool.imap_unordered(import_zone, zones_iterator, chunksize=10)
             pool.close()
             nb_zones = 0
             for _ in res:
@@ -147,6 +135,17 @@ def _import_cosmogony_to_pg(cosmogony_path, partial_import):
             pool.join()
 
         print_timer()
+        if _IS_PARTIAL_IMPORT:
+            print("Importing data from import.%s to import.zones", _PARTIAL_IMPORT_TABLE)
+            _pg_execute(
+                """
+                    INSERT INTO import.zones (
+                        SELECT * from import.%(table)s
+                        WHERE %(table)s.id not in zones.id
+                    );
+                    DROP TABLE import.zones_%(table)s;
+                """, {'table': _PARTIAL_IMPORT_TABLE}
+                )
 
     if cosmogony_path.endswith('.json'):
         with open(cosmogony_path, "rb") as f:
