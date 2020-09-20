@@ -104,9 +104,9 @@ def _import_cosmogony_to_pg(cosmogony_path, partial_import):
             )
             WITH (OIDS=FALSE);
 
-            CREATE INDEX IF NOT EXISTS ON import.zones USING gist(geometry);
+            CREATE INDEX IF NOT EXISTS import.zones_geometry_idx ON import.zones USING gist(geometry);
 
-            CREATE INDEX IF NOT EXISTS ON import.zones (parent);
+            CREATE INDEX IF NOT EXISTS import.zones_parent_idx ON import.zones (parent);
         """
         )
 
