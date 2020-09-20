@@ -73,7 +73,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
 
     if not _IS_PARTIAL_IMPORT:
         _pg_execute("DROP TABLE IF EXISTS import.zones;")
-    _pg_execute("DROP TABLE IF EXISTS import.%s;", _PARTIAL_IMPORT_TABLE)
+    _pg_execute("DROP TABLE IF EXISTS import.%s;", (_PARTIAL_IMPORT_TABLE, ))
 
     _pg_execute(
         """
@@ -102,7 +102,7 @@ def _import_cosmogony_to_pg(cosmogony_path):
                 CREATE TABLE import.%s (
                     LIKE import.zones including all
                 );
-            """, _PARTIAL_IMPORT_TABLE
+            """, (_PARTIAL_IMPORT_TABLE, )
             )
 
     mp_context = get_context()
